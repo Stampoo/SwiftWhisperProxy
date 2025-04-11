@@ -6,5 +6,5 @@
 //
 
 public struct WhisperRecognizeResult: Sendable {
-    let recognizedText: String
+    public let recognizedText: String
 }
