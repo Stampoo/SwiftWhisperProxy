@@ -18,6 +18,7 @@ final class WhisperProxyImplementation: @unchecked Sendable, WhisperProxy {
     private let operationQueue = DispatchQueue(label: "com.whisper_proxy.operation.queue")
     private var inProgress: Bool = false
     private var currentContinuation: AsyncThrowingStream<WhisperResult, Error>.Continuation?
+    private var parameters: WhisperParameters
 
     // MARK: - Initialization
 
@@ -32,6 +33,12 @@ final class WhisperProxyImplementation: @unchecked Sendable, WhisperProxy {
 
         self.context = context
         self.model = model
+        self.parameters = WhisperParameters()
+    }
+
+    convenience init(model: WhisperModel, parameters: WhisperParameters) throws {
+        try self.init(model: model)
+        self.parameters = parameters
     }
 
     deinit {
@@ -104,7 +111,13 @@ private extension WhisperProxyImplementation {
         }
 
         let whisperInstancePointer = Unmanaged.passUnretained(self).toOpaque()
-        var parameters = whisperParameters(from: model)
+
+        guard let langPointer = parameters.langPointer else {
+            throw BaseError(description: "Can't find language pointer")
+        }
+
+        var parameters = parameters.whisperParameters
+        parameters.language = UnsafePointer(langPointer)
 
         setProgresCallback(to: whisperInstancePointer, in: &parameters)
 
@@ -129,13 +142,6 @@ private extension WhisperProxyImplementation {
         inProgress = false
 
         return recognizedText
-    }
-
-    func whisperParameters(from model: WhisperModel) -> whisper_full_params {
-        var parameters = whisper_full_default_params(WHISPER_SAMPLING_GREEDY)
-        parameters.language = model.language.rawValue.withCString { $0 }
-
-        return parameters
     }
 
     func setProgresCallback(to handler: UnsafeMutableRawPointer, in parameters: inout whisper_full_params) {
@@ -181,8 +187,14 @@ private extension WhisperProxyImplementation {
 
 }
 
+// MARK: - Constants
+
+private extension String {
+    static let autoDetectionLanguage: Self = "auto"
+}
+
 // MARK: - Initialziation
 
-public func NewWhisperProxy(model: WhisperModel) throws -> WhisperProxy {
-    return try WhisperProxyImplementation(model: model)
+public func NewWhisperProxy(model: WhisperModel, parameters: WhisperParameters) throws -> WhisperProxy {
+    return try WhisperProxyImplementation(model: model, parameters: parameters)
 }

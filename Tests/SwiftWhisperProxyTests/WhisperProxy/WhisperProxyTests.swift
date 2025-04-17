@@ -19,7 +19,11 @@ struct WhisperProxyTests {
         let model = UtilsForTests.model
         let audiofilePath = UtilsForTests.audioFile
 
-        let whisperProxy: WhisperProxy = try NewWhisperProxy(model: model)
+        let whisperParameters = WhisperParameters {
+            $0.lang = .rawValue("en")
+        }
+
+        let whisperProxy: WhisperProxy = try NewWhisperProxy(model: model, parameters: whisperParameters)
         let converter: AudioConverter = DefaultAudioConverter()
 
         for try await result in try whisperProxy.recognize(from: audiofilePath, converter: converter) {
@@ -48,7 +52,11 @@ struct WhisperProxyTests {
 
         #expect(request.httpBody != nil)
 
-        let whisperProxy: WhisperProxy = try NewWhisperProxy(model: model)
+        let whisperParameters = WhisperParameters {
+            $0.lang = .rawValue("auto")
+        }
+
+        let whisperProxy: WhisperProxy = try NewWhisperProxy(model: model, parameters: whisperParameters)
         let converter: AudioConverter = DefaultAudioConverter()
 
         for try await result in try await whisperProxy.recognize(from: request.httpBody!, converter: converter) {
@@ -71,9 +79,11 @@ struct WhisperProxyTests {
             let _ : WhisperProxy = try WhisperProxyImplementation(model: model)
         }
 
+        let whisperParameters = WhisperParameters()
+
         await #expect(throws: Error.self) {
             let model = UtilsForTests.model
-            let whisperProxy: WhisperProxy = try NewWhisperProxy(model: model)
+            let whisperProxy: WhisperProxy = try NewWhisperProxy(model: model, parameters: whisperParameters)
 
             _ = try await whisperProxy.recognize(from: [])
         }
